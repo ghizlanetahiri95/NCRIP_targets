@@ -1,0 +1,130 @@
+---
+title: "sRNA_mRNA_ScatterPlot"
+author: "Ghizlane Tahiri Zainane"
+date: "2024-09-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Load libraries
+library(ggplot2)
+```
+
+
+# 1-Load data
+
+```{r}
+sRNA_data <- read.csv("../sRNA_mRNA_expression/DESeq2_sRNA_24_DEG_Bowtie.txt", sep= "\t")
+mRNA_data <- read.csv("../sRNA_mRNA_expression/mRNA_expresssion_net.txt", sep= "\t")
+```
+
+# 2-Merge of the sRNA and mRNA datasets
+
+* Merge the two datasets to get the common genes. 
+
+```{r}
+# Merge the datasets 
+merged_data <- merge(sRNA_data, mRNA_data, by = "Gene", suffixes = c("_sRNA", "_mRNA"), all = FALSE)
+
+# Verify the fusion
+print(head(merged_data))
+```
+
+
+# 3-Preporcessing to remove NA values
+
+
+```{r}
+# Remove rows with  NA values in the relevant columns.
+cleaned_data <- merged_data[!is.na(merged_data$log2FC_sRNA) & !is.na(merged_data$log2FC_mRNA), ]
+
+# Verify the fisrt rows of the processed dataframe 
+head(cleaned_data)
+
+
+```
+
+# 4-Classification of sRNA and mRNA
+
+   Based on the log2fold change of the sRNA and mRNA levels, genes will be classified in four groups:
+  
+ - **1. down_sRNA.down_mRNA**
+ - **2- up_sRNA.down_mRNA**
+ - **3- down_sRNA.up_mRNA**   
+ - **4- up_sRNA.up_mRNA**
+
+```{r}
+# Classify sRNA and mRNA
+cleaned_data$sRNA_class <- ifelse(cleaned_data$log2FC_sRNA > 0, "up_sRNA", "down_sRNA")
+cleaned_data$mRNA_class <- ifelse(cleaned_data$log2FC_mRNA > 0, "up_mRNA", "down_mRNA")
+
+# Create the combined column
+cleaned_data$class <- interaction(cleaned_data$sRNA_class, cleaned_data$mRNA_class)
+table(cleaned_data$class)
+
+# Save the dataframe as txt file
+write.table(cleaned_data, file = "all_target.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+
+```
+# 5-Direct targets dataset
+
+
+```{r}
+# Filter the data to get the direct targets
+filtered_data <- cleaned_data[cleaned_data$sRNA_class == "down_sRNA" & cleaned_data$mRNA_class == "up_mRNA", ]
+head(filtered_data)
+
+# Save the dataframe as txt file
+write.table(filtered_data, file = "direct_target.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+
+```
+
+# 6- Data visualization 
+
+
+```{r}
+# Create a color palette for each sRNA and mRNA combination.
+color_palette <- c("up_sRNA.up_mRNA" = "red",
+                   "up_sRNA.down_mRNA" = "orange",
+                   "down_sRNA.up_mRNA" = "black",
+                   "down_sRNA.down_mRNA" = "blue")
+
+# Create the scatterplot with ggplot2
+ggplot(cleaned_data, aes(x = log2FC_sRNA, y = log2FC_mRNA, color = class)) +
+  geom_point(size = 5) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray") +  # Línea horizontal en y = 0
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray") +  # Línea vertical en x = 0
+  scale_color_manual(values = color_palette) +
+  labs(x = "log2FC_sRNA", y = "log2FC_mRNA", title = "Scatterplot de log2FCs") +
+  theme_minimal()
+
+
+```
+
+
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
