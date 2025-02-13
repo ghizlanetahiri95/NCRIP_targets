@@ -1,0 +1,94 @@
+---
+title: "sRNA_mRNA_network"
+author: "Ghizlane Tahiri Zainane"
+date: "2024-09-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1-Load data
+
+```{r}
+sRNA_data <- read.csv("../sRNA_mRNA_expression/DESeq2_sRNA_24_DEG_Bowtie.txt", sep= "\t")
+mRNA_data <- read.csv("../sRNA_mRNA_expression/mRNA_expresssion_net.txt", sep= "\t")
+```
+
+
+# 2-Verify data
+
+```{r}
+# Verifica los primeros registros de tus dataframes
+head(sRNA_data)
+head(mRNA_data)
+
+# Comprueba las dimensiones
+dim(sRNA_data)
+dim(mRNA_data)
+
+```
+# 3-Filter common genes
+
+```{r}
+# Realiza el merge tipo "inner" para obtener solo genes comunes
+merged_data <- merge(sRNA_data, mRNA_data, by = "Gene", all = FALSE)
+
+# Verifica el dataframe combinado
+print(head(merged_data))
+
+# Guardar el resultado en un archivo de texto (tabulado)
+write.table(merged_data, file = "common_sRNA_mRNA.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+
+
+```
+
+# 4-Network construction
+
+```{r}
+# Classify sRNAs and mRNAs
+merged_data$sRNA_class <- ifelse(merged_data$log2FC_sRNA > 0, "up_sRNA", "down_sRNA")
+merged_data$mRNA_class <- ifelse(merged_data$log2FC_mRNA > 0, "up_mRNA", "down_mRNA")
+
+# Create the 'group' column by combining the classifications of sRNA and mRNA
+merged_data$group <- paste(merged_data$sRNA_class, merged_data$mRNA_class, sep = "_")
+
+# Filter only the records where 'group' is "down_sRNA_up_mRNA"
+resultado <- subset(merged_data, group == "down_sRNA_up_mRNA")
+
+#Create the additional necessary columns
+resultado$source <- resultado$Gene
+resultado$target <- paste0(resultado$Gene, "_sRNA")
+resultado$sRNA_expression <- resultado$log2FC_sRNA
+resultado$mRNA_expression <- resultado$log2FC_mRNA
+resultado$interaction_type <- "regulates"
+
+# Select and reorder the columns as required
+resultado <- resultado[, c("source", "target", "sRNA_expression", "mRNA_expression", "group", "interaction_type")]
+
+# Show result
+print(head(resultado))
+
+# Save result as txt file
+write.table(resultado, file = "network_sRNA_mRNA.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
+
+
